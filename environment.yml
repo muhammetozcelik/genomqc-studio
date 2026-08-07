@@ -1,0 +1,16 @@
+name: genomqc-studio
+
+channels:
+  - conda-forge
+  - bioconda
+
+dependencies:
+  - python=3.12
+  - numpy
+  - pandas
+  - scikit-learn
+  - plotly
+  - streamlit=1.61
+  - pytest
+  - r-base=4.5
+  - bioconductor-deseq2=1.50

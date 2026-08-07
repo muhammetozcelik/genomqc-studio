@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+.venv/
+venv/
+
+# Streamlit secrets
+.streamlit/secrets.toml
+
+# R
+.Rhistory
+.RData
+.Ruserdata
+
+# Generated reports
+reports/*
+!reports/.gitkeep
+
+# Editors and operating systems
+*.swp
+.vscode/
+.DS_Store
+Thumbs.db
