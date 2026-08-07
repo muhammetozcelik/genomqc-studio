@@ -37,6 +37,13 @@ GenomQC Studio adds a quality gate before differential expression analysis:
 - Downloadable JSON analysis passport
 - Deterministic simulated demonstration dataset
 - Automated test suite
+- DESeq2 differential expression analysis
+- Benjamini–Hochberg multiple-testing correction
+- Configurable reference and comparison conditions
+- Volcano plot
+- MA plot
+- Differential-expression heatmap
+- Downloadable complete DESeq2 result table
 
 ## Validation checks
 
@@ -151,14 +158,15 @@ genomqc-studio/
 
 ## Development roadmap
 
-- DESeq2 differential expression analysis
+## Development roadmap
+
 - Design-formula and confounding audit
-- Volcano and MA plots
-- Differential-expression result tables
-- Expression heatmaps
+- Batch-aware differential expression
+- Gene identifier annotation
+- Functional enrichment analysis
 - Exportable HTML analysis report
 - Containerized deployment
-- Continuous integration
+- R-enabled continuous integration
 
 ## Limitations
 

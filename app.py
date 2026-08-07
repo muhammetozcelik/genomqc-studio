@@ -14,6 +14,9 @@ from src.data_loader import (
     load_count_matrix,
     load_metadata,
 )
+from src.differential_expression_ui import (
+    render_differential_expression,
+)
 from src.validator import validate_dataset
 
 
@@ -206,7 +209,9 @@ with st.sidebar:
 
 st.markdown(
     """
-    <div class="hero-label">RNA-seq dataset intelligence</div>
+    <div class="hero-label">
+        RNA-seq dataset intelligence
+    </div>
     <div class="hero-title">
         Know your data<br>
         before you trust the result.
@@ -224,6 +229,7 @@ st.markdown(
 
 if use_demo:
     source_name = "Simulated demonstration dataset"
+
     st.markdown(
         '<div class="source-badge">'
         'SIMULATED DEMO · 3 CONTROL · 3 TREATED'
@@ -284,11 +290,19 @@ metric_columns[3].metric(
     f"{report.score}/100",
 )
 
-overview_tab, audit_tab, exploration_tab, data_tab = st.tabs(
+
+(
+    overview_tab,
+    audit_tab,
+    exploration_tab,
+    differential_tab,
+    data_tab,
+) = st.tabs(
     [
         "Overview",
         "Quality audit",
         "Exploration",
+        "Differential expression",
         "Data preview",
     ]
 )
@@ -388,10 +402,17 @@ with exploration_tab:
         )
     else:
         try:
-            pca_result = run_pca(counts, metadata)
+            pca_result = run_pca(
+                counts,
+                metadata,
+            )
 
-            pc1_variance = pca_result.explained_variance[0]
-            pc2_variance = pca_result.explained_variance[1]
+            pc1_variance = (
+                pca_result.explained_variance[0]
+            )
+            pc2_variance = (
+                pca_result.explained_variance[1]
+            )
 
             scatter_arguments = {
                 "data_frame": pca_result.coordinates,
@@ -401,8 +422,12 @@ with exploration_tab:
                 "hover_name": "sample_id",
                 "color_discrete_sequence": COLORS,
                 "labels": {
-                    "PC1": f"PC1 ({pc1_variance:.1f}%)",
-                    "PC2": f"PC2 ({pc2_variance:.1f}%)",
+                    "PC1": (
+                        f"PC1 ({pc1_variance:.1f}%)"
+                    ),
+                    "PC2": (
+                        f"PC2 ({pc2_variance:.1f}%)"
+                    ),
                     "condition": "Condition",
                 },
                 "title": (
@@ -411,13 +436,23 @@ with exploration_tab:
                 ),
             }
 
-            if "batch" in pca_result.coordinates.columns:
+            if (
+                "batch"
+                in pca_result.coordinates.columns
+            ):
                 scatter_arguments["symbol"] = "batch"
 
-            pca_figure = px.scatter(**scatter_arguments)
-            pca_figure.update_traces(
-                marker={"size": 14, "line": {"width": 1}}
+            pca_figure = px.scatter(
+                **scatter_arguments
             )
+
+            pca_figure.update_traces(
+                marker={
+                    "size": 14,
+                    "line": {"width": 1},
+                }
+            )
+
             pca_figure.update_layout(
                 template="plotly_dark",
                 paper_bgcolor="rgba(0,0,0,0)",
@@ -429,8 +464,8 @@ with exploration_tab:
                 use_container_width=True,
             )
 
-            correlations = calculate_sample_correlations(
-                counts
+            correlations = (
+                calculate_sample_correlations(counts)
             )
 
             correlation_figure = px.imshow(
@@ -446,6 +481,7 @@ with exploration_tab:
                 zmax=1,
                 title="Pearson sample correlation",
             )
+
             correlation_figure.update_layout(
                 template="plotly_dark",
                 paper_bgcolor="rgba(0,0,0,0)",
@@ -457,18 +493,30 @@ with exploration_tab:
             )
 
         except Exception as error:
-            st.error(f"Exploration failed: {error}")
+            st.error(
+                f"Exploration failed: {error}"
+            )
+
+
+with differential_tab:
+    render_differential_expression(
+        counts,
+        metadata,
+        report,
+    )
 
 
 with data_tab:
     st.subheader("Count matrix")
     st.caption("First 30 genes")
+
     st.dataframe(
         counts.head(30),
         use_container_width=True,
     )
 
     st.subheader("Sample metadata")
+
     st.dataframe(
         metadata.reset_index(),
         use_container_width=True,
