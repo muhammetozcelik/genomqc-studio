@@ -1,5 +1,9 @@
 # GenomQC Studio
 
+[![CI](https://github.com/muhammetozcelik/genomqc-studio/actions/workflows/ci.yml/badge.svg)](https://github.com/muhammetozcelik/genomqc-studio/actions/workflows/ci.yml)
+![Python](https://img.shields.io/badge/Python-3.12-3776AB)
+![Streamlit](https://img.shields.io/badge/Streamlit-1.61-FF4B4B)
+
 A local-first application for auditing, validating and exploring RNA-seq count datasets before differential expression analysis.
 
 GenomQC Studio checks whether a count matrix and its experimental metadata are structurally and statistically ready for downstream analysis. It turns common dataset problems into clear, actionable findings and produces a downloadable analysis passport.
