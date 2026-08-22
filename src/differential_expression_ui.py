@@ -50,7 +50,61 @@ def _prepare_volcano_data(
     return volcano_data
 
 
-def _render_volcano_plot(results: pd.DataFrame):
+def _apply_significance_thresholds(
+    results: pd.DataFrame,
+    adjusted_pvalue_threshold: float,
+    log2_fold_change_threshold: float,
+) -> pd.DataFrame:
+    if not 0 <= adjusted_pvalue_threshold <= 1:
+        raise ValueError(
+            "Adjusted p-value threshold must be between 0 and 1."
+        )
+
+    if log2_fold_change_threshold < 0:
+        raise ValueError(
+            "Log2 fold-change threshold cannot be negative."
+        )
+
+    classified_results = results.copy()
+
+    adjusted_pvalues = classified_results["padj"].fillna(1.0)
+    fold_changes = classified_results["log2FoldChange"]
+
+    passes_pvalue_threshold = (
+        adjusted_pvalues <= adjusted_pvalue_threshold
+    )
+    passes_fold_change_threshold = (
+        fold_changes.abs() >= log2_fold_change_threshold
+    )
+    has_direction = fold_changes != 0
+
+    significant = (
+        passes_pvalue_threshold
+        & passes_fold_change_threshold
+        & has_direction
+    )
+
+    classified_results["significant"] = significant
+    classified_results["direction"] = "Not significant"
+
+    classified_results.loc[
+        significant & (fold_changes > 0),
+        "direction",
+    ] = "Upregulated"
+
+    classified_results.loc[
+        significant & (fold_changes < 0),
+        "direction",
+    ] = "Downregulated"
+
+    return classified_results
+
+
+def _render_volcano_plot(
+    results: pd.DataFrame,
+    log2_fold_change_threshold: float,
+    adjusted_pvalue_threshold: float,
+):
     volcano_data = _prepare_volcano_data(results)
 
     figure = px.scatter(
@@ -74,21 +128,24 @@ def _render_volcano_plot(results: pd.DataFrame):
         title="Differential-expression volcano plot",
     )
 
-    figure.add_vline(
-        x=-1,
-        line_dash="dash",
-        line_color="#A9BBB6",
-    )
-    figure.add_vline(
-        x=1,
-        line_dash="dash",
-        line_color="#A9BBB6",
-    )
-    figure.add_hline(
-        y=-np.log10(0.05),
-        line_dash="dash",
-        line_color="#A9BBB6",
-    )
+    if log2_fold_change_threshold > 0:
+        figure.add_vline(
+            x=-log2_fold_change_threshold,
+            line_dash="dash",
+            line_color="#A9BBB6",
+        )
+        figure.add_vline(
+            x=log2_fold_change_threshold,
+            line_dash="dash",
+            line_color="#A9BBB6",
+        )
+
+    if adjusted_pvalue_threshold > 0:
+        figure.add_hline(
+            y=-np.log10(adjusted_pvalue_threshold),
+            line_dash="dash",
+            line_color="#A9BBB6",
+        )
 
     figure.update_traces(
         marker={
@@ -108,7 +165,10 @@ def _render_volcano_plot(results: pd.DataFrame):
     )
 
 
-def _render_ma_plot(results: pd.DataFrame):
+def _render_ma_plot(
+    results: pd.DataFrame,
+    log2_fold_change_threshold: float,
+):
     plot_data = results.copy()
     plot_data["log10_base_mean"] = np.log10(
         plot_data["baseMean"] + 1
@@ -139,16 +199,18 @@ def _render_ma_plot(results: pd.DataFrame):
         y=0,
         line_color="#A9BBB6",
     )
-    figure.add_hline(
-        y=-1,
-        line_dash="dash",
-        line_color="#A9BBB6",
-    )
-    figure.add_hline(
-        y=1,
-        line_dash="dash",
-        line_color="#A9BBB6",
-    )
+
+    if log2_fold_change_threshold > 0:
+        figure.add_hline(
+            y=-log2_fold_change_threshold,
+            line_dash="dash",
+            line_color="#A9BBB6",
+        )
+        figure.add_hline(
+            y=log2_fold_change_threshold,
+            line_dash="dash",
+            line_color="#A9BBB6",
+        )
 
     figure.update_traces(
         marker={
@@ -283,6 +345,32 @@ def render_differential_expression(
         options=comparison_options,
     )
 
+    threshold_columns = st.columns(2)
+
+    adjusted_pvalue_threshold = threshold_columns[0].slider(
+        "Adjusted p-value (FDR) threshold",
+        min_value=0.01,
+        max_value=0.10,
+        value=0.05,
+        step=0.01,
+        help=(
+            "Genes must have an adjusted p-value at or below "
+            "this threshold."
+        ),
+    )
+
+    log2_fold_change_threshold = threshold_columns[1].slider(
+        "Absolute log2 fold-change threshold",
+        min_value=0.0,
+        max_value=5.0,
+        value=1.0,
+        step=0.1,
+        help=(
+            "Genes must meet or exceed this absolute "
+            "log2 fold-change threshold."
+        ),
+    )
+
     st.caption(
         "Positive fold changes indicate higher expression in "
         f"**{comparison_condition}** relative to "
@@ -342,7 +430,12 @@ def render_differential_expression(
         return
 
     result = stored_analysis["result"]
-    result_table = result.results
+
+    result_table = _apply_significance_thresholds(
+        results=result.results,
+        adjusted_pvalue_threshold=adjusted_pvalue_threshold,
+        log2_fold_change_threshold=log2_fold_change_threshold,
+    )
 
     upregulated_count = int(
         (
@@ -388,10 +481,23 @@ def render_differential_expression(
     )
 
     with volcano_tab:
-        _render_volcano_plot(result_table)
+        _render_volcano_plot(
+            results=result_table,
+            log2_fold_change_threshold=(
+                log2_fold_change_threshold
+            ),
+            adjusted_pvalue_threshold=(
+                adjusted_pvalue_threshold
+            ),
+        )
 
     with ma_tab:
-        _render_ma_plot(result_table)
+        _render_ma_plot(
+            results=result_table,
+            log2_fold_change_threshold=(
+                log2_fold_change_threshold
+            ),
+        )
 
     with heatmap_tab:
         _render_expression_heatmap(
